@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interval Ear Trainer</title>
+<style>
+  :root {
+    --bg: #f5f6fb;
+    --card: #ffffff;
+    --ink: #1c2033;
+    --muted: #6b7190;
+    --line: #e4e6f2;
+    --accent: #5b5bf0;
+    --accent-soft: #ecebff;
+    --good: #16a36a;
+    --good-soft: #e3f7ee;
+    --bad: #e5484d;
+    --bad-soft: #fdeaea;
+    --radius: 16px;
+    --shadow: 0 1px 2px rgba(28,32,51,.04), 0 8px 30px rgba(28,32,51,.07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1120; --card: #181b30; --ink: #eceefc; --muted: #9aa0c4;
+      --line: #2a2e4c; --accent: #8483ff; --accent-soft: #25264a;
+      --good: #3ad193; --good-soft: #14352a; --bad: #ff7075; --bad-soft: #3b1c24;
+      --shadow: 0 8px 30px rgba(0,0,0,.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 880px; margin: 0 auto; padding: 32px 20px 64px; }
+  header { text-align: center; margin-bottom: 24px; }
+  h1 { font-size: clamp(26px, 5vw, 36px); margin: 0 0 6px; letter-spacing: -.02em; }
+  header p { margin: 0; color: var(--muted); }
+
+  .tabs {
+    display: flex; gap: 4px; padding: 4px; background: var(--card);
+    border: 1px solid var(--line); border-radius: 999px; width: fit-content;
+    margin: 0 auto 24px; box-shadow: var(--shadow);
+  }
+  .tabs button {
+    border: 0; background: none; color: var(--muted); font: inherit; font-weight: 600;
+    padding: 10px 26px; border-radius: 999px; cursor: pointer; transition: .15s;
+  }
+  .tabs button[aria-selected="true"] { background: var(--accent); color: #fff; }
+  .tabs button:focus-visible, .btn:focus-visible, .chip:focus-visible, select:focus-visible {
+    outline: 3px solid var(--accent); outline-offset: 2px;
+  }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 24px;
+  }
+  .card + .card { margin-top: 16px; }
+  section[hidden] { display: none; }
+
+  .label { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
+  .chip {
+    border: 1.5px solid var(--line); background: var(--card); color: var(--ink);
+    border-radius: 12px; padding: 12px 2px; font: inherit; font-weight: 700; font-size: 16px;
+    cursor: pointer; transition: .12s; position: relative;
+  }
+  .chip small { display: block; font-weight: 500; font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .chip:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip[aria-pressed="true"] small { color: rgba(255,255,255,.8); }
+  .chip.correct { background: var(--good-soft); border-color: var(--good); color: var(--good); }
+  .chip.wrong { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); animation: shake .3s; }
+  .chip:disabled { cursor: default; transform: none; }
+  @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; margin-top: 20px; }
+  .field { display: flex; flex-direction: column; }
+  select {
+    font: inherit; font-weight: 600; color: var(--ink); background: var(--card);
+    border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 110px;
+  }
+  .seg { display: inline-flex; border: 1.5px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .seg button {
+    border: 0; background: var(--card); color: var(--muted); font: inherit; font-weight: 600;
+    padding: 10px 14px; cursor: pointer;
+  }
+  .seg button + button { border-left: 1.5px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+
+  .btn {
+    border: 0; border-radius: 12px; font: inherit; font-weight: 700; cursor: pointer;
+    padding: 12px 22px; background: var(--accent); color: #fff; transition: .12s;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:active { transform: scale(.97); }
+  .btn.ghost { background: var(--accent-soft); color: var(--accent); }
+
+  .staff-wrap { margin-top: 20px; border-radius: 12px; background: var(--bg); padding: 8px; overflow-x: auto; }
+  svg.staff { display: block; width: 100%; max-width: 720px; margin: 0 auto; height: auto; }
+  svg .stafflines line, svg .ledger { stroke: var(--ink); stroke-width: 1.3; opacity: .75; }
+  svg .clef { fill: none; stroke: var(--ink); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  svg .head { fill: none; stroke: var(--ink); stroke-width: 2.6; }
+  svg .acc { fill: var(--ink); font-family: "Noto Music","Segoe UI Symbol","Apple Symbols",serif; font-size: 30px; }
+  svg .notelabel { fill: var(--muted); font: 600 12px -apple-system, "Segoe UI", sans-serif; text-anchor: middle; }
+  svg .note { animation: pop .35s ease-out backwards; transform-box: fill-box; transform-origin: center; }
+  svg .note.second { animation-delay: .12s; }
+  @keyframes pop { from { opacity: 0; transform: scale(.6); } }
+  svg .note.playing .head { stroke: var(--accent); }
+  svg .note.playing .acc { fill: var(--accent); }
+
+  .info { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-top: 18px; }
+  .info h2 { margin: 0; font-size: 26px; letter-spacing: -.01em; }
+  .info .meta { color: var(--muted); }
+  .tip { margin-top: 10px; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); color: var(--ink); font-size: 14.5px; }
+
+  .scorebar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+  .stat { flex: 1 1 90px; background: var(--bg); border-radius: 12px; padding: 10px 14px; }
+  .stat b { display: block; font-size: 22px; }
+  .stat span { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+
+  .quiz-top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .feedback { min-height: 28px; margin-top: 16px; font-weight: 700; font-size: 18px; }
+  .feedback.good { color: var(--good); }
+  .feedback.bad { color: var(--bad); }
+  .answers { margin-top: 18px; }
+  .next { margin-top: 16px; }
+  .hidden { display: none !important; }
+  footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 28px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>🎼 Interval Ear Trainer</h1>
+    <p>Learn what every interval looks and sounds like, then test your ear.</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" id="tab-learn" aria-selected="true" aria-controls="learn">Learn</button>
+    <button role="tab" id="tab-quiz" aria-selected="false" aria-controls="quiz">Quiz</button>
+  </nav>
+
+  <!-- LEARN -->
+  <section id="learn" role="tabpanel" aria-labelledby="tab-learn">
+    <div class="card">
+      <p class="label">Choose an interval</p>
+      <div class="grid" id="learn-grid"></div>
+
+      <div class="controls">
+        <div class="field">
+          <p class="label">Starting note</p>
+          <select id="learn-root" aria-label="Starting note"></select>
+        </div>
+        <div class="field">
+          <p class="label">Play as</p>
+          <div class="seg" id="learn-mode">
+            <button data-mode="asc" aria-pressed="true">Ascending</button>
+            <button data-mode="desc" aria-pressed="false">Descending</button>
+            <button data-mode="harm" aria-pressed="false">Together</button>
+          </div>
+        </div>
+        <button class="btn" id="learn-play">▶ Play</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="info">
+        <h2 id="learn-name"></h2>
+        <span class="meta" id="learn-meta"></span>
+      </div>
+      <div class="staff-wrap"><svg class="staff" id="learn-staff" role="img"></svg></div>
+      <div class="tip" id="learn-tip"></div>
+    </div>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="quiz" role="tabpanel" aria-labelledby="tab-quiz" hidden>
+    <div class="card">
+      <div class="scorebar">
+        <div class="stat"><b id="q-score">0 / 0</b><span>Score</span></div>
+        <div class="stat"><b id="q-pct">–</b><span>Accuracy</span></div>
+        <div class="stat"><b id="q-streak">0</b><span>Streak</span></div>
+        <div class="stat"><b id="q-best">0</b><span>Best streak</span></div>
+      </div>
+
+      <div class="quiz-top">
+        <button class="btn" id="q-play">▶ Play interval</button>
+        <div class="seg" id="quiz-mode" aria-label="Play style">
+          <button data-mode="asc" aria-pressed="true">Ascending</button>
+          <button data-mode="desc" aria-pressed="false">Descending</button>
+          <button data-mode="harm" aria-pressed="false">Together</button>
+        </div>
+      </div>
+
+      <div class="answers">
+        <p class="label">What interval did you hear?</p>
+        <div class="grid" id="quiz-grid"></div>
+      </div>
+
+      <div class="feedback" id="q-feedback" aria-live="polite"></div>
+      <div id="q-reveal" class="hidden">
+        <div class="staff-wrap"><svg class="staff" id="quiz-staff" role="img"></svg></div>
+      </div>
+      <button class="btn next hidden" id="q-next">Next interval →</button>
+    </div>
+  </section>
+
+  <footer>Tip: use headphones or turn your volume up a little. In the quiz, keys 1–9 and 0 pick the first ten answers and R replays.</footer>
+</main>
+
+<script>
+(() => {
+  // ---------- Music data ----------
+  const INTERVALS = [
+    { id: "P1", name: "Perfect Unison",  short: "P1", semis: 0,  steps: 0, tip: "Two identical pitches. Sounds like one note played twice.", song: "Any note repeated, like the opening of “Happy Birthday” (the first two notes)." },
+    { id: "m2", name: "Minor Second",    short: "m2", semis: 1,  steps: 1, tip: "The smallest step, tense and creepy.", song: "Think of the “Jaws” theme." },
+    { id: "M2", name: "Major Second",    short: "M2", semis: 2,  steps: 1, tip: "A whole step. Bright and stepwise.", song: "“Happy Birthday” (Hap-py) or “Do-Re-Mi”." },
+    { id: "m3", name: "Minor Third",     short: "m3", semis: 3,  steps: 2, tip: "Sad or soft, the sound of a minor chord.", song: "“Greensleeves” or “Smoke on the Water”." },
+    { id: "M3", name: "Major Third",     short: "M3", semis: 4,  steps: 2, tip: "Happy and stable, the sound of a major chord.", song: "“When the Saints Go Marching In” (Oh when the…)." },
+    { id: "P4", name: "Perfect Fourth",  short: "P4", semis: 5,  steps: 3, tip: "Open and strong, like a fanfare.", song: "“Here Comes the Bride” or the “Amazing Grace” opening." },
+    { id: "P5", name: "Perfect Fifth",   short: "P5", semis: 7,  steps: 4, tip: "Hollow, powerful and very stable.", song: "“Twinkle, Twinkle, Little Star” (Twin-kle) or the Star Wars theme." },
+    { id: "m6", name: "Minor Sixth",     short: "m6", semis: 8,  steps: 5, tip: "Wistful and dramatic.", song: "“The Entertainer” (opening leap) or “Go Down Moses”." },
+    { id: "M6", name: "Major Sixth",     short: "M6", semis: 9,  steps: 5, tip: "Warm and sweet.", song: "“My Bonnie Lies Over the Ocean” or the NBC chimes." },
+    { id: "m7", name: "Minor Seventh",   short: "m7", semis: 10, steps: 6, tip: "Bluesy and unresolved.", song: "“Somewhere” from West Side Story, or the Star Trek original theme." },
+    { id: "M7", name: "Major Seventh",   short: "M7", semis: 11, steps: 6, tip: "Dreamy and yearning, very close to the octave.", song: "“Take On Me” (chorus leap) or “Somewhere Over the Rainbow” (just shy of the octave)." },
+    { id: "P8", name: "Perfect Octave",  short: "P8", semis: 12, steps: 7, tip: "The same note, higher. It sounds like a copy.", song: "“Somewhere Over the Rainbow” (Some-where)." },
+  ];
+  const quality = id => ({ P: "Perfect", M: "Major", m: "Minor" })[id[0]];
+
+  const LETTERS = ["C","D","E","F","G","A","B"];
+  const LETTER_SEMI = [0,2,4,5,7,9,11];
+
+  // Root notes: naturals from C4 to B4 (+ C5)
+  const ROOTS = [];
+  for (let o = 4; o <= 4; o++) LETTERS.forEach((l, i) => ROOTS.push({ letter: i, oct: o, label: l + o }));
+  ROOTS.push({ letter: 0, oct: 5, label: "C5" });
+
+  // Given a root and an interval, work out both notes, with the right spelling.
+  function buildInterval(root, iv) {
+    const lowStep = root.oct * 7 + root.letter;
+    const lowMidi = 12 * (root.oct + 1) + LETTER_SEMI[root.letter];
+    const topStep = lowStep + iv.steps;
+    const topLetter = topStep % 7, topOct = Math.floor(topStep / 7);
+    const natural = 12 * (topOct + 1) + LETTER_SEMI[topLetter];
+    const topMidi = lowMidi + iv.semis;
+    const acc = topMidi - natural; // -1, 0 or +1 for natural roots
+    return [
+      { step: lowStep, midi: lowMidi, acc: 0, name: LETTERS[root.letter] },
+      { step: topStep, midi: topMidi, acc, name: LETTERS[topLetter] + (acc > 0 ? "♯" : acc < 0 ? "♭" : "") },
+    ];
+  }
+
+  // ---------- Audio ----------
+  let ctx = null;
+  const freq = m => 440 * Math.pow(2, (m - 69) / 12);
+  function audio() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === "suspended") ctx.resume();
+    return ctx;
+  }
+  // Soft piano-ish tone: a few harmonics with a quick attack and exponential decay.
+  function tone(midi, when, dur) {
+    const ac = audio();
+    const out = ac.createGain();
+    out.gain.setValueAtTime(0.0001, when);
+    out.gain.exponentialRampToValueAtTime(0.32, when + 0.012);
+    out.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+    const lp = ac.createBiquadFilter();
+    lp.type = "lowpass"; lp.frequency.value = 3200;
+    out.connect(lp); lp.connect(ac.destination);
+    [[1, 1], [2, 0.38], [3, 0.14], [4, 0.06]].forEach(([mult, amp]) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = "sine"; o.frequency.value = freq(midi) * mult; g.gain.value = amp;
+      o.connect(g); g.connect(out);
+      o.start(when); o.stop(when + dur + 0.05);
+    });
+  }
+  // Plays two notes and calls onNote(index) as each starts so the staff can highlight.
+  function playInterval(notes, mode, onNote) {
+    const t0 = audio().currentTime + 0.05;
+    const gap = 0.85, len = 1.5;
+    let seq;
+    if (mode === "harm") seq = [[0, 0], [1, 0]];
+    else if (mode === "desc") seq = [[1, 0], [0, gap]];
+    else seq = [[0, 0], [1, gap]];
+    seq.forEach(([i, dt]) => {
+      tone(notes[i].midi, t0 + dt, mode === "harm" ? 2.2 : len);
+      if (onNote) setTimeout(() => onNote(i), (0.05 + dt) * 1000);
+    });
+  }
+
+  // ---------- Staff drawing ----------
+  const NS = "http://www.w3.org/2000/svg";
+  const SP = 12;                  // distance between staff lines
+  const TOP = 96;                 // y of top staff line
+  const BOTTOM = TOP + 4 * SP;    // y of bottom staff line (E4)
+  const E4_STEP = 4 * 7 + 2;
+  const yFor = step => BOTTOM - (step - E4_STEP) * (SP / 2);
+  const el = (tag, attrs = {}, parent) => {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  };
+
+  function drawStaff(svg, notes, mode, label = true) {
+    svg.replaceChildren();
+    const W = 560;
+    svg.setAttribute("viewBox", `0 54 ${W} 146`);
+    svg.setAttribute("aria-label", `Treble staff showing ${notes[0].name} and ${notes[1].name}`);
+
+    const lines = el("g", { class: "stafflines" }, svg);
+    for (let i = 0; i < 5; i++) el("line", { x1: 20, x2: W - 20, y1: TOP + i * SP, y2: TOP + i * SP }, lines);
+    el("line", { x1: W - 20, x2: W - 20, y1: TOP, y2: BOTTOM, stroke: "var(--ink)", "stroke-width": 1.3, opacity: .75 }, svg);
+
+    // Treble clef (hand-drawn path so it looks the same on every device)
+    const g = el("g", { transform: `translate(52 ${BOTTOM - SP})` }, svg);
+    el("path", { class: "clef", d:
+      "M 3 4 C -4 -2, -3 -12, 4 -22 C 10 -31, 10 -43, 5 -50 C 1 -55, -3 -50, -3 -44 " +
+      "C -3 -34, 8 -20, 12 -9 C 15 0, 7 8, 0 4 C -6 0, -3 -8, 3 -8 C 8 -8, 9 -1, 4 2 " +
+      "M 3 4 C 3 12, 4 20, 1 24 C -2 28, -9 26, -6 21" }, g);
+    el("circle", { cx: 1, cy: 24, r: 2.3, fill: "var(--ink)", stroke: "none" }, g);
+
+    const harm = mode === "harm";
+    const xs = harm ? [330, 330] : [260, 400];
+    const order = mode === "desc" ? [1, 0] : [0, 1];
+    const sameStep = notes[0].step === notes[1].step;
+    const adjacent = Math.abs(notes[0].step - notes[1].step) === 1;
+
+    notes.forEach((n, i) => {
+      let x = harm ? 330 : xs[order.indexOf(i)];
+      if (harm && (sameStep || adjacent) && i === 1) x += 26; // avoid overlapping heads
+      const y = yFor(n.step);
+      const hw = 16; // half width of the head, ledger lines are a bit wider
+
+      // ledger lines
+      const ledgerSteps = [];
+      for (let s = E4_STEP - 2; s >= n.step; s -= 2) ledgerSteps.push(s);          // C4 and below
+      for (let s = E4_STEP + 10; s <= n.step; s += 2) ledgerSteps.push(s);         // A5 and above
+      const gr = el("g", { class: "note" + (i === 1 ? " second" : ""), "data-i": i }, svg);
+      ledgerSteps.forEach(s => {
+        const ly = yFor(s);
+        el("line", { class: "ledger", x1: x - 24, x2: x + 24, y1: ly, y2: ly }, gr);
+      });
+
+      // whole-note head
+      el("ellipse", { class: "head", cx: x, cy: y, rx: hw, ry: 7, transform: `rotate(-18 ${x} ${y})` }, gr);
+      el("ellipse", { class: "head", cx: x, cy: y, rx: 4.6, ry: 7.4, transform: `rotate(28 ${x} ${y})`, "stroke-width": 2 }, gr);
+
+      if (n.acc) {
+        const t = el("text", { class: "acc", x: x - 38, y: y + 10 }, gr);
+        t.textContent = n.acc > 0 ? "♯" : "♭";
+      }
+      if (label) {
+        const t = el("text", { class: "notelabel", x, y: 192 }, gr);
+        t.textContent = n.name;
+      }
+    });
+  }
+  function highlight(svg, i) {
+    svg.querySelectorAll(".note").forEach(g => g.classList.toggle("playing", +g.dataset.i === i));
+    setTimeout(() => svg.querySelectorAll(".note").forEach(g => g.classList.remove("playing")), 700);
+  }
+
+  // ---------- Shared UI helpers ----------
+  function makeGrid(container, onPick, withSub) {
+    container.replaceChildren();
+    INTERVALS.forEach((iv, idx) => {
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.dataset.id = iv.id;
+      b.type = "button";
+      b.innerHTML = iv.short + (withSub ? `<small>${iv.semis} semitone${iv.semis === 1 ? "" : "s"}</small>` : "");
+      b.setAttribute("aria-label", iv.name);
+      if (withSub) b.setAttribute("aria-pressed", "false");
+      b.addEventListener("click", () => onPick(iv, b));
+      container.appendChild(b);
+    });
+  }
+  function bindSeg(seg, onChange) {
+    seg.addEventListener("click", e => {
+      const b = e.target.closest("button"); if (!b) return;
+      seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+      onChange(b.dataset.mode);
+    });
+  }
+
+  // ---------- LEARN ----------
+  const L = { iv: INTERVALS[6], root: ROOTS[0], mode: "asc", notes: null };
+  const learnSvg = document.getElementById("learn-staff");
+
+  const rootSel = document.getElementById("learn-root");
+  ROOTS.forEach((r, i) => rootSel.add(new Option(r.label, i)));
+  rootSel.addEventListener("change", () => { L.root = ROOTS[+rootSel.value]; renderLearn(); });
+
+  makeGrid(document.getElementById("learn-grid"), iv => { L.iv = iv; renderLearn(); playLearn(); }, true);
+
+  bindSeg(document.getElementById("learn-mode"), m => { L.mode = m; renderLearn(); playLearn(); });
+  document.getElementById("learn-play").addEventListener("click", playLearn);
+
+  function renderLearn() {
+    L.notes = buildInterval(L.root, L.iv);
+    document.querySelectorAll("#learn-grid .chip").forEach(c => c.setAttribute("aria-pressed", c.dataset.id === L.iv.id));
+    document.getElementById("learn-name").textContent = `${L.iv.name} (${L.iv.short})`;
+    document.getElementById("learn-meta").textContent =
+      `${L.notes[0].name} → ${L.notes[1].name} · ${L.iv.steps + 1} letter names · ${L.iv.semis} semitone${L.iv.semis === 1 ? "" : "s"}`;
+    document.getElementById("learn-tip").innerHTML = `<b>${L.iv.tip}</b><br>Try humming: ${L.iv.song}`;
+    drawStaff(learnSvg, L.notes, L.mode);
+  }
+  function playLearn() { playInterval(L.notes, L.mode, i => highlight(learnSvg, i)); }
+
+  // ---------- QUIZ ----------
+  const Q = { cur: null, answered: false, mode: "asc", score: 0, total: 0, streak: 0, best: 0 };
+  const quizSvg = document.getElementById("quiz-staff");
+  const fb = document.getElementById("q-feedback");
+  const reveal = document.getElementById("q-reveal");
+  const nextBtn = document.getElementById("q-next");
+  const quizGrid = document.getElementById("quiz-grid");
+
+  makeGrid(quizGrid, (iv, btn) => answer(iv, btn), false);
+  quizGrid.querySelectorAll(".chip").forEach((c, i) => { c.title = INTERVALS[i].name; });
+  bindSeg(document.getElementById("quiz-mode"), m => { Q.mode = m; if (Q.cur && !Q.answered) playQuiz(); });
+
+  function newQuestion() {
+    let iv;
+    do { iv = INTERVALS[Math.floor(Math.random() * INTERVALS.length)]; } while (Q.cur && iv.id === Q.cur.iv.id && INTERVALS.length > 1);
+    // octave of the lower note is limited so the top note stays on or near the staff
+    const pool = iv.id === "P8" || iv.steps >= 6 ? ROOTS.slice(0, 7) : ROOTS;
+    const root = pool[Math.floor(Math.random() * pool.length)];
+    Q.cur = { iv, notes: buildInterval(root, iv) };
+    Q.answered = false;
+    quizGrid.querySelectorAll(".chip").forEach(c => { c.disabled = false; c.className = "chip"; });
+    fb.textContent = ""; fb.className = "feedback";
+    reveal.classList.add("hidden"); nextBtn.classList.add("hidden");
+    playQuiz();
+  }
+  function playQuiz() { if (Q.cur) playInterval(Q.cur.notes, Q.mode); }
+
+  function answer(iv, btn) {
+    if (Q.answered || !Q.cur) return;
+    Q.answered = true; Q.total++;
+    const right = iv.id === Q.cur.iv.id;
+    if (right) {
+      Q.score++; Q.streak++; Q.best = Math.max(Q.best, Q.streak);
+      btn.classList.add("correct");
+      fb.textContent = `✓ Correct! That was a ${Q.cur.iv.name}.`; fb.className = "feedback good";
+    } else {
+      Q.streak = 0;
+      btn.classList.add("wrong");
+      quizGrid.querySelector(`[data-id="${Q.cur.iv.id}"]`).classList.add("correct");
+      fb.textContent = `✗ Not quite. You chose ${iv.name}; it was a ${Q.cur.iv.name}.`; fb.className = "feedback bad";
+    }
+    quizGrid.querySelectorAll(".chip").forEach(c => c.disabled = true);
+    drawStaff(quizSvg, Q.cur.notes, Q.mode);
+    reveal.classList.remove("hidden"); nextBtn.classList.remove("hidden");
+    nextBtn.focus({ preventScroll: true });
+    updateStats();
+  }
+  function updateStats() {
+    document.getElementById("q-score").textContent = `${Q.score} / ${Q.total}`;
+    document.getElementById("q-pct").textContent = Q.total ? Math.round(100 * Q.score / Q.total) + "%" : "–";
+    document.getElementById("q-streak").textContent = Q.streak;
+    document.getElementById("q-best").textContent = Q.best;
+  }
+  document.getElementById("q-play").addEventListener("click", () => { if (!Q.cur) newQuestion(); else playQuiz(); });
+  nextBtn.addEventListener("click", newQuestion);
+
+  // Keyboard: 1-9 and 0 pick the first ten answers; R replays the interval.
+  document.addEventListener("keydown", e => {
+    if (document.getElementById("quiz").hidden || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target.tagName === "SELECT") return;
+    const k = "1234567890".indexOf(e.key);
+    if (k >= 0 && !Q.answered && Q.cur) { const c = quizGrid.children[k]; c.click(); }
+    if (e.key.toLowerCase() === "r" && Q.cur) playQuiz();
+  });
+
+  // ---------- Tabs ----------
+  const tabs = { learn: document.getElementById("tab-learn"), quiz: document.getElementById("tab-quiz") };
+  function showTab(name) {
+    for (const k in tabs) {
+      tabs[k].setAttribute("aria-selected", k === name);
+      document.getElementById(k).hidden = k !== name;
+    }
+  }
+  tabs.learn.addEventListener("click", () => showTab("learn"));
+  tabs.quiz.addEventListener("click", () => { showTab("quiz"); });
+
+  renderLearn();
+})();
+</script>
+</body>
+</html>
