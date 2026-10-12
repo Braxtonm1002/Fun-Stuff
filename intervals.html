@@ -217,17 +217,17 @@
 (() => {
   // ---------- Music data ----------
   const INTERVALS = [
-    { id: "P1", name: "Perfect Unison",  short: "P1", semis: 0,  steps: 0, tip: "Two identical pitches. Sounds like one note played twice.", song: "Any note repeated, like the opening of “Happy Birthday” (the first two notes)." },
+    { id: "P1", name: "Perfect Unison",  short: "P1", semis: 0,  steps: 0, tip: "Two identical pitches. Sounds like one note played twice.", song: "a note repeated, like “Hap-py” in “Happy Birthday”." },
     { id: "m2", name: "Minor Second",    short: "m2", semis: 1,  steps: 1, tip: "The smallest step, tense and creepy.", song: "Think of the “Jaws” theme." },
-    { id: "M2", name: "Major Second",    short: "M2", semis: 2,  steps: 1, tip: "A whole step. Bright and stepwise.", song: "“Happy Birthday” (Hap-py) or “Do-Re-Mi”." },
+    { id: "M2", name: "Major Second",    short: "M2", semis: 2,  steps: 1, tip: "A whole step. Bright and stepwise.", song: "the first two notes of “Do-Re-Mi”, or “Happy Birthday” on “birth-day”." },
     { id: "m3", name: "Minor Third",     short: "m3", semis: 3,  steps: 2, tip: "Sad or soft, the sound of a minor chord.", song: "“Greensleeves” or “Smoke on the Water”." },
     { id: "M3", name: "Major Third",     short: "M3", semis: 4,  steps: 2, tip: "Happy and stable, the sound of a major chord.", song: "“When the Saints Go Marching In” (Oh when the…)." },
     { id: "P4", name: "Perfect Fourth",  short: "P4", semis: 5,  steps: 3, tip: "Open and strong, like a fanfare.", song: "“Here Comes the Bride” or the “Amazing Grace” opening." },
     { id: "P5", name: "Perfect Fifth",   short: "P5", semis: 7,  steps: 4, tip: "Hollow, powerful and very stable.", song: "“Twinkle, Twinkle, Little Star” (Twin-kle) or the Star Wars theme." },
-    { id: "m6", name: "Minor Sixth",     short: "m6", semis: 8,  steps: 5, tip: "Wistful and dramatic.", song: "“The Entertainer” (opening leap) or “Go Down Moses”." },
+    { id: "m6", name: "Minor Sixth",     short: "m6", semis: 8,  steps: 5, tip: "Wistful and dramatic.", song: "the first two notes of “Go Down Moses”." },
     { id: "M6", name: "Major Sixth",     short: "M6", semis: 9,  steps: 5, tip: "Warm and sweet.", song: "“My Bonnie Lies Over the Ocean” or the NBC chimes." },
     { id: "m7", name: "Minor Seventh",   short: "m7", semis: 10, steps: 6, tip: "Bluesy and unresolved.", song: "“Somewhere” from West Side Story, or the Star Trek original theme." },
-    { id: "M7", name: "Major Seventh",   short: "M7", semis: 11, steps: 6, tip: "Dreamy and yearning, very close to the octave.", song: "“Take On Me” (chorus leap) or “Somewhere Over the Rainbow” (just shy of the octave)." },
+    { id: "M7", name: "Major Seventh",   short: "M7", semis: 11, steps: 6, tip: "Dreamy and yearning, very close to the octave.", song: "no famous melody, so listen for it as an octave that stops one semitone short." },
     { id: "P8", name: "Perfect Octave",  short: "P8", semis: 12, steps: 7, tip: "The same note, higher. It sounds like a copy.", song: "“Somewhere Over the Rainbow” (Some-where)." },
   ];
   const quality = id => ({ P: "Perfect", M: "Major", m: "Minor" })[id[0]];
