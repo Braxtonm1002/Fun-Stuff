@@ -40,7 +40,7 @@
 <canvas id="c"></canvas>
 <div id="ui">
   <h1>Blob Pet 🫧</h1>
-  <p>Move to make it look · click the ground to drop a snack · click the blob to pet it</p>
+  <p>Move to make him fly after you · click the grass to drop a snack · click the blob to pet it</p>
   <div id="bar"><div id="fill"></div></div>
 </div>
 
@@ -66,7 +66,8 @@
     x: innerWidth / 2, y: 0, vx: 0,
     r: 60,
     squash: 1, squashV: 0,     // vertical scale spring
-    vy: 0, air: 0,             // jump height
+    vy: 0, air: 0,             // altitude above the ground
+    flap: 0, tilt: 0,
     blink: 0, nextBlink: 2,
     happy: 0,                  // seconds of happy face remaining
     chew: 0,
@@ -125,34 +126,36 @@
       }
     }
 
-    // wander toward snack or gently toward cursor
-    const goal = blob.target ? blob.target.x : (mouse.x - W / 2) * 0.25 + W / 2;
-    const dx = goal - blob.x;
-    const speed = blob.target ? 260 : 90;
-    if (Math.abs(dx) > 8) {
-      blob.vx += Math.sign(dx) * speed * dt * 6;
-      if (Math.random() < dt * (blob.target ? 3 : 0.6)) jump(blob.target ? 260 : 180);
-    }
-    blob.vx *= 1 - 5 * dt;
+    // fly toward a snack, otherwise hover after the cursor
+    const gy0 = groundY();
+    const maxAir = gy0 - 170;
+    const goalX = blob.target ? blob.target.x : mouse.x;
+    const goalAir = blob.target
+      ? Math.max(0, gy0 - blob.target.ty)
+      : Math.max(0, Math.min(maxAir, gy0 - mouse.y + 80));
+    const speed = blob.target ? 320 : 220;
+    const dx = goalX - blob.x;
+    if (Math.abs(dx) > 8) blob.vx += Math.sign(dx) * speed * dt * 5;
+    blob.vx *= 1 - 4 * dt;
     blob.vx = Math.max(-speed, Math.min(speed, blob.vx));
     blob.x += blob.vx * dt;
     blob.x = Math.max(blob.r, Math.min(W - blob.r, blob.x));
-
-    // jump physics
-    if (blob.air > 0 || blob.vy > 0) {
-      blob.vy -= 900 * dt;
-      blob.air += blob.vy * dt;
-      if (blob.air <= 0) { blob.air = 0; blob.vy = 0; blob.squashV -= 4; }
-    }
+    blob.flap += dt * (blob.air > 4 ? 14 : 5);
+    // glide altitude toward goal, with a gentle bob while hovering
+    const bob = blob.air > 4 ? Math.sin(blob.flap * 0.5) * 6 : 0;
+    blob.air += (goalAir + bob - blob.air) * Math.min(1, 3 * dt);
+    blob.air = Math.max(0, Math.min(maxAir, blob.air));
+    blob.tilt += (blob.vx / 900 - blob.tilt) * Math.min(1, 8 * dt);
 
     // eat snacks
-    if (blob.target && Math.abs(blob.target.x - blob.x) < blob.r * 0.7) {
+    if (blob.target && Math.abs(blob.target.x - blob.x) < blob.r * 0.7 &&
+        Math.abs(blob.air - Math.max(0, groundY() - blob.target.ty)) < blob.r * 1.2) {
       snacks.splice(snacks.indexOf(blob.target), 1);
       blob.chew = 0.8;
       blob.happy = 1.2;
       blob.mood = Math.min(1, blob.mood + 0.12);
       blob.squashV += 5;
-      for (let i = 0; i < 3; i++) hearts.push({ x: blob.x + rand(-30, 30), y: blob.y - blob.r * 2, vy: rand(-100, -60), life: 0 });
+      for (let i = 0; i < 3; i++) hearts.push({ x: blob.x + rand(-30, 30), y: blob.y - blob.r * 2 - blob.air, vy: rand(-100, -60), life: 0 });
     }
 
     // squash spring
@@ -201,7 +204,7 @@
     const gy = blob.y;
     ctx.fillStyle = 'rgba(0,0,0,.15)';
     ctx.beginPath();
-    ctx.ellipse(blob.x, gy + 4, blob.r * (1 - blob.air / 400), 10, 0, 0, 7);
+    ctx.ellipse(blob.x, gy + 4, blob.r * Math.max(0.3, 1 - blob.air / 500), 10, 0, 0, 7);
     ctx.fill();
 
     // body
@@ -209,6 +212,21 @@
     const hue = 330 - blob.mood * 130;   // sad = pink-ish, happy = bluish-green
     ctx.save();
     ctx.translate(blob.x, gy - blob.air);
+    ctx.rotate(blob.tilt);
+    // wings (behind the body)
+    const flapA = Math.sin(blob.flap) * (blob.air > 4 ? 0.7 : 0.15);
+    ctx.fillStyle = 'rgba(255,255,255,.92)';
+    ctx.strokeStyle = 'rgba(45,106,143,.45)';
+    ctx.lineWidth = 2;
+    for (const side of [-1, 1]) {
+      ctx.save();
+      ctx.translate(side * blob.r * 0.9, -blob.r * 0.9);
+      ctx.rotate(side * (0.5 + flapA));
+      ctx.beginPath();
+      ctx.ellipse(side * 34, 0, 40, 17, 0, 0, 7);
+      ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
     ctx.scale(sx, sq);
     const g = ctx.createRadialGradient(-15, -blob.r * 1.5, 8, 0, -blob.r, blob.r * 1.4);
     g.addColorStop(0, `hsl(${hue}, 90%, 85%)`);
