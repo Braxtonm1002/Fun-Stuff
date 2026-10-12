@@ -60,7 +60,7 @@
   addEventListener('resize', resize);
 
   const rand = (a, b) => a + Math.random() * (b - a);
-  const groundY = () => H * 0.6 + (H * 0.4) * 0.5;   // blob walks mid-grass
+  const groundY = () => Math.min(H * 0.72, H - 90);   // blob stands well inside the grass
 
   const blob = {
     x: innerWidth / 2, y: 0, vx: 0,
