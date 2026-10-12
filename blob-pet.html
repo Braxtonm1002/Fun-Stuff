@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blob Pet 🫧</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: linear-gradient(#cdeffd, #e9f9ff 60%, #c8f0c8 60%, #a9e4a9);
+    font-family: "Segoe UI", system-ui, sans-serif;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  canvas { position: fixed; inset: 0; }
+  #ui {
+    position: fixed;
+    top: 14px; left: 0; right: 0;
+    text-align: center;
+    color: #2d6a8f;
+    pointer-events: none;
+  }
+  #ui h1 { margin: 0 0 4px; font-size: 1.3rem; }
+  #ui p { margin: 0; font-size: .95rem; opacity: .85; }
+  #bar {
+    display: inline-block;
+    width: 160px; height: 12px;
+    margin-top: 8px;
+    background: rgba(255,255,255,.7);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid #2d6a8f;
+  }
+  #fill { height: 100%; width: 70%; background: #ff7aa2; transition: width .3s; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <h1>Blob Pet 🫧</h1>
+  <p>Move to make it look · click the ground to drop a snack · click the blob to pet it</p>
+  <div id="bar"><div id="fill"></div></div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const fill = document.getElementById('fill');
+  let W, H, dpr;
+  function resize() {
+    dpr = devicePixelRatio || 1;
+    W = innerWidth; H = innerHeight;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  addEventListener('resize', resize);
+
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const groundY = () => H * 0.6 + (H * 0.4) * 0.5;   // blob walks mid-grass
+
+  const blob = {
+    x: innerWidth / 2, y: 0, vx: 0,
+    r: 60,
+    squash: 1, squashV: 0,     // vertical scale spring
+    vy: 0, air: 0,             // jump height
+    blink: 0, nextBlink: 2,
+    happy: 0,                  // seconds of happy face remaining
+    chew: 0,
+    mood: 0.7,                 // 0..1
+    target: null
+  };
+  const mouse = { x: W / 2, y: H / 2 };
+  const snacks = [];
+  const hearts = [];
+
+  addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+
+  addEventListener('pointerdown', e => {
+    const dx = e.clientX - blob.x, dy = e.clientY - (blob.y - blob.air - blob.r);
+    if (Math.hypot(dx, dy) < blob.r * 1.2) {
+      pet();
+    } else if (e.clientY > H * 0.6) {
+      snacks.push({ x: e.clientX, y: 0, vy: 0, ty: e.clientY, emoji: ['🍓','🍪','🍩','🍉','🧁'][(Math.random()*5)|0] });
+    }
+  });
+
+  function pet() {
+    blob.happy = 1.5;
+    blob.mood = Math.min(1, blob.mood + 0.08);
+    blob.squashV -= 6;
+    for (let i = 0; i < 5; i++) {
+      hearts.push({ x: blob.x + rand(-40, 40), y: blob.y - blob.r * 2 - blob.air, vy: rand(-90, -50), life: 0 });
+    }
+  }
+
+  function jump(power) { if (blob.air <= 0) blob.vy = power; }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 0.033);
+    last = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  function update(dt) {
+    blob.y = groundY();
+
+    // snacks fall, then wait on the ground
+    for (const s of snacks) {
+      if (s.y < s.ty) { s.vy += 1400 * dt; s.y = Math.min(s.y + s.vy * dt, s.ty); }
+    }
+    // choose nearest landed snack
+    blob.target = null;
+    let best = Infinity;
+    for (const s of snacks) {
+      if (s.y >= s.ty - 1) {
+        const d = Math.abs(s.x - blob.x);
+        if (d < best) { best = d; blob.target = s; }
+      }
+    }
+
+    // wander toward snack or gently toward cursor
+    const goal = blob.target ? blob.target.x : (mouse.x - W / 2) * 0.25 + W / 2;
+    const dx = goal - blob.x;
+    const speed = blob.target ? 260 : 90;
+    if (Math.abs(dx) > 8) {
+      blob.vx += Math.sign(dx) * speed * dt * 6;
+      if (Math.random() < dt * (blob.target ? 3 : 0.6)) jump(blob.target ? 260 : 180);
+    }
+    blob.vx *= 1 - 5 * dt;
+    blob.vx = Math.max(-speed, Math.min(speed, blob.vx));
+    blob.x += blob.vx * dt;
+    blob.x = Math.max(blob.r, Math.min(W - blob.r, blob.x));
+
+    // jump physics
+    if (blob.air > 0 || blob.vy > 0) {
+      blob.vy -= 900 * dt;
+      blob.air += blob.vy * dt;
+      if (blob.air <= 0) { blob.air = 0; blob.vy = 0; blob.squashV -= 4; }
+    }
+
+    // eat snacks
+    if (blob.target && Math.abs(blob.target.x - blob.x) < blob.r * 0.7) {
+      snacks.splice(snacks.indexOf(blob.target), 1);
+      blob.chew = 0.8;
+      blob.happy = 1.2;
+      blob.mood = Math.min(1, blob.mood + 0.12);
+      blob.squashV += 5;
+      for (let i = 0; i < 3; i++) hearts.push({ x: blob.x + rand(-30, 30), y: blob.y - blob.r * 2, vy: rand(-100, -60), life: 0 });
+    }
+
+    // squash spring
+    blob.squashV += (1 - blob.squash) * 120 * dt;
+    blob.squashV *= 1 - 7 * dt;
+    blob.squash += blob.squashV * dt;
+    blob.squash = Math.max(0.6, Math.min(1.5, blob.squash));
+    // stretch when moving up
+    blob.squash += (Math.abs(blob.vy) / 4000) * 0.0;
+
+    // timers
+    blob.happy = Math.max(0, blob.happy - dt);
+    blob.chew = Math.max(0, blob.chew - dt);
+    blob.mood = Math.max(0, blob.mood - dt * 0.01);
+    blob.nextBlink -= dt;
+    if (blob.nextBlink <= 0) { blob.blink = 0.12; blob.nextBlink = rand(1.5, 4); }
+    blob.blink = Math.max(0, blob.blink - dt);
+
+    for (let i = hearts.length - 1; i >= 0; i--) {
+      const h = hearts[i];
+      h.life += dt; h.y += h.vy * dt;
+      if (h.life > 1.2) hearts.splice(i, 1);
+    }
+    fill.style.width = (blob.mood * 100) + '%';
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // clouds
+    ctx.fillStyle = 'rgba(255,255,255,.8)';
+    const t = performance.now() / 1000;
+    for (let i = 0; i < 4; i++) {
+      const cx = ((i * 330 + t * 14) % (W + 200)) - 100, cy = 110 + (i % 2) * 60;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 26, 0, 7); ctx.arc(cx + 28, cy + 6, 22, 0, 7); ctx.arc(cx - 28, cy + 8, 20, 0, 7);
+      ctx.fill();
+    }
+
+    // snacks
+    ctx.font = '34px serif';
+    ctx.textAlign = 'center';
+    for (const s of snacks) ctx.fillText(s.emoji, s.x, s.y);
+
+    // shadow
+    const gy = blob.y;
+    ctx.fillStyle = 'rgba(0,0,0,.15)';
+    ctx.beginPath();
+    ctx.ellipse(blob.x, gy + 4, blob.r * (1 - blob.air / 400), 10, 0, 0, 7);
+    ctx.fill();
+
+    // body
+    const sq = blob.squash, sx = 1 / Math.sqrt(sq);
+    const hue = 330 - blob.mood * 130;   // sad = pink-ish, happy = bluish-green
+    ctx.save();
+    ctx.translate(blob.x, gy - blob.air);
+    ctx.scale(sx, sq);
+    const g = ctx.createRadialGradient(-15, -blob.r * 1.5, 8, 0, -blob.r, blob.r * 1.4);
+    g.addColorStop(0, `hsl(${hue}, 90%, 85%)`);
+    g.addColorStop(1, `hsl(${hue}, 75%, 62%)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(-blob.r, 0);
+    ctx.bezierCurveTo(-blob.r * 1.05, -blob.r * 2, blob.r * 1.05, -blob.r * 2, blob.r, 0);
+    ctx.quadraticCurveTo(0, 8, -blob.r, 0);
+    ctx.fill();
+
+    // face looks toward cursor
+    const look = Math.max(-1, Math.min(1, (mouse.x - blob.x) / 300));
+    const fx = look * 12, fy = -blob.r * 1.05;
+    ctx.fillStyle = '#243b53';
+    for (const ex of [-20, 20]) {
+      if (blob.blink > 0 || blob.happy > 0) {
+        ctx.strokeStyle = '#243b53'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+        ctx.beginPath();
+        if (blob.happy > 0) ctx.arc(fx + ex, fy, 8, Math.PI * 1.1, Math.PI * 1.9);
+        else { ctx.moveTo(fx + ex - 7, fy); ctx.lineTo(fx + ex + 7, fy); }
+        ctx.stroke();
+      } else {
+        ctx.beginPath(); ctx.arc(fx + ex, fy, 8, 0, 7); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(fx + ex + look * 3 + 2, fy - 3, 2.8, 0, 7); ctx.fill();
+        ctx.fillStyle = '#243b53';
+      }
+    }
+    // cheeks
+    ctx.fillStyle = 'rgba(255,100,130,.35)';
+    ctx.beginPath(); ctx.ellipse(fx - 36, fy + 14, 9, 6, 0, 0, 7); ctx.ellipse(fx + 36, fy + 14, 9, 6, 0, 0, 7); ctx.fill();
+    // mouth
+    ctx.strokeStyle = '#243b53'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath();
+    if (blob.chew > 0) {
+      const o = 4 + Math.abs(Math.sin(blob.chew * 20)) * 8;
+      ctx.ellipse(fx, fy + 18, 8, o, 0, 0, 7);
+    } else if (blob.mood < 0.25) {
+      ctx.arc(fx, fy + 28, 10, Math.PI * 1.15, Math.PI * 1.85);
+    } else {
+      ctx.arc(fx, fy + 10, 10 + (blob.happy > 0 ? 4 : 0), Math.PI * 0.15, Math.PI * 0.85);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    // hearts
+    ctx.font = '26px serif';
+    for (const h of hearts) {
+      ctx.globalAlpha = Math.max(0, 1 - h.life / 1.2);
+      ctx.fillText('💖', h.x, h.y);
+    }
+    ctx.globalAlpha = 1;
+
+    if (blob.mood < 0.25) {
+      ctx.font = '18px system-ui';
+      ctx.fillStyle = '#2d6a8f';
+      ctx.fillText('I\'m hungry... 🥺', blob.x, gy - blob.r * 2.4 - blob.air);
+    }
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
