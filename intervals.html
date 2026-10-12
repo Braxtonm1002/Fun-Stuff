@@ -116,6 +116,8 @@
   .info { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-top: 18px; }
   .info h2 { margin: 0; font-size: 26px; letter-spacing: -.01em; }
   .info .meta { color: var(--muted); }
+  .songs { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .songbtn { padding: 8px 14px; font-size: 14px; }
   .tip { margin-top: 10px; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); color: var(--ink); font-size: 14.5px; }
 
   .scorebar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
@@ -217,18 +219,18 @@
 (() => {
   // ---------- Music data ----------
   const INTERVALS = [
-    { id: "P1", name: "Perfect Unison",  short: "P1", semis: 0,  steps: 0, tip: "Two identical pitches. Sounds like one note played twice.", song: "a note repeated, like “Hap-py” in “Happy Birthday”." },
-    { id: "m2", name: "Minor Second",    short: "m2", semis: 1,  steps: 1, tip: "The smallest step, tense and creepy.", song: "Think of the “Jaws” theme." },
-    { id: "M2", name: "Major Second",    short: "M2", semis: 2,  steps: 1, tip: "A whole step. Bright and stepwise.", song: "the first two notes of “Do-Re-Mi”, or “Happy Birthday” on “birth-day”." },
-    { id: "m3", name: "Minor Third",     short: "m3", semis: 3,  steps: 2, tip: "Sad or soft, the sound of a minor chord.", song: "“Greensleeves” or “Smoke on the Water”." },
-    { id: "M3", name: "Major Third",     short: "M3", semis: 4,  steps: 2, tip: "Happy and stable, the sound of a major chord.", song: "“When the Saints Go Marching In” (Oh when the…)." },
-    { id: "P4", name: "Perfect Fourth",  short: "P4", semis: 5,  steps: 3, tip: "Open and strong, like a fanfare.", song: "“Here Comes the Bride” or the “Amazing Grace” opening." },
-    { id: "P5", name: "Perfect Fifth",   short: "P5", semis: 7,  steps: 4, tip: "Hollow, powerful and very stable.", song: "“Twinkle, Twinkle, Little Star” (Twin-kle) or the Star Wars theme." },
-    { id: "m6", name: "Minor Sixth",     short: "m6", semis: 8,  steps: 5, tip: "Wistful and dramatic.", song: "the first two notes of “Go Down Moses”." },
-    { id: "M6", name: "Major Sixth",     short: "M6", semis: 9,  steps: 5, tip: "Warm and sweet.", song: "“My Bonnie Lies Over the Ocean” or the NBC chimes." },
-    { id: "m7", name: "Minor Seventh",   short: "m7", semis: 10, steps: 6, tip: "Bluesy and unresolved.", song: "“Somewhere” from West Side Story, or the Star Trek original theme." },
-    { id: "M7", name: "Major Seventh",   short: "M7", semis: 11, steps: 6, tip: "Dreamy and yearning, very close to the octave.", song: "no famous melody, so listen for it as an octave that stops one semitone short." },
-    { id: "P8", name: "Perfect Octave",  short: "P8", semis: 12, steps: 7, tip: "The same note, higher. It sounds like a copy.", song: "“Somewhere Over the Rainbow” (Some-where)." },
+    { id: "P1", name: "Perfect Unison",  short: "P1", semis: 0,  steps: 0, tip: "Two identical pitches. Sounds like one note played twice.", songs: [{ title: "Happy Birthday (“Hap-py birth-day”)", notes: [[0,.75],[0,.25],[2,1],[0,1],[5,1],[4,2]] }] },
+    { id: "m2", name: "Minor Second",    short: "m2", semis: 1,  steps: 1, tip: "The smallest step, tense and creepy.", songs: [{ title: "Jaws theme", notes: [[0,.5],[1,.5],[0,.5],[1,.5],[0,.3],[1,.3],[0,.3],[1,.3],[0,.3],[1,1]] }] },
+    { id: "M2", name: "Major Second",    short: "M2", semis: 2,  steps: 1, tip: "A whole step. Bright and stepwise.", songs: [{ title: "Do-Re-Mi (“Doe, a deer”)", notes: [[0,.75],[2,.25],[4,.75],[0,.25],[4,.75],[0,.25],[4,2]] }] },
+    { id: "m3", name: "Minor Third",     short: "m3", semis: 3,  steps: 2, tip: "Sad or soft, the sound of a minor chord.", songs: [{ title: "Smoke on the Water (riff)", notes: [[0,1],[3,1],[5,1.5],[0,1],[3,1],[6,.5],[5,1.5],[0,1],[3,1],[5,1.5],[3,1],[0,2]] }] },
+    { id: "M3", name: "Major Third",     short: "M3", semis: 4,  steps: 2, tip: "Happy and stable, the sound of a major chord.", songs: [{ title: "When the Saints Go Marching In", notes: [[0,.75],[4,.75],[5,.75],[7,2],[0,.75],[4,.75],[5,.75],[7,2],[0,.75],[4,.75],[5,.75],[7,1],[4,1],[0,1],[4,1],[2,2]] }] },
+    { id: "P4", name: "Perfect Fourth",  short: "P4", semis: 5,  steps: 3, tip: "Open and strong, like a fanfare.", songs: [{ title: "Amazing Grace", notes: [[0,1],[5,2],[9,.5],[5,.5],[9,2],[7,1],[5,2],[2,1],[0,3]] }] },
+    { id: "P5", name: "Perfect Fifth",   short: "P5", semis: 7,  steps: 4, tip: "Hollow, powerful and very stable.", songs: [{ title: "Twinkle, Twinkle, Little Star", notes: [[0,1],[0,1],[7,1],[7,1],[9,1],[9,1],[7,2]] }] },
+    { id: "m6", name: "Minor Sixth",     short: "m6", semis: 8,  steps: 5, tip: "Wistful and dramatic.", songs: [{ title: "Go Down Moses (first two notes)", notes: [[0,1],[8,2]] }] },
+    { id: "M6", name: "Major Sixth",     short: "M6", semis: 9,  steps: 5, tip: "Warm and sweet.", songs: [{ title: "NBC chimes", notes: [[0,1],[9,1],[5,2]] }] },
+    { id: "m7", name: "Minor Seventh",   short: "m7", semis: 10, steps: 6, tip: "Bluesy and unresolved.", songs: [{ title: "Somewhere, West Side Story (first two notes)", notes: [[0,1],[10,2]] }] },
+    { id: "M7", name: "Major Seventh",   short: "M7", semis: 11, steps: 6, tip: "Dreamy and yearning, very close to the octave.", songs: [] },
+    { id: "P8", name: "Perfect Octave",  short: "P8", semis: 12, steps: 7, tip: "The same note, higher. It sounds like a copy.", songs: [{ title: "Somewhere Over the Rainbow", notes: [[0,2],[12,2],[11,1],[7,.5],[9,.5],[11,1],[12,3]] }] },
   ];
   const quality = id => ({ P: "Perfect", M: "Major", m: "Minor" })[id[0]];
 
@@ -291,6 +293,16 @@
     seq.forEach(([i, dt]) => {
       tone(notes[i].midi, t0 + dt, mode === "harm" ? 2.2 : len);
       if (onNote) setTimeout(() => onNote(i), (0.05 + dt) * 1000);
+    });
+  }
+
+  // Plays the opening of a song, transposed to start on the given MIDI note.
+  function playSong(song, startMidi) {
+    let t = audio().currentTime + 0.05;
+    const beat = 0.4;
+    song.notes.forEach(([semi, beats]) => {
+      tone(startMidi + semi, t, beats * beat + 0.45);
+      t += beats * beat;
     });
   }
 
@@ -409,7 +421,21 @@
     document.getElementById("learn-name").textContent = `${L.iv.name} (${L.iv.short})`;
     document.getElementById("learn-meta").textContent =
       `${L.notes[0].name} → ${L.notes[1].name} · ${L.iv.steps + 1} letter names · ${L.iv.semis} semitone${L.iv.semis === 1 ? "" : "s"}`;
-    document.getElementById("learn-tip").innerHTML = `<b>${L.iv.tip}</b><br>Try humming: ${L.iv.song}`;
+    const tip = document.getElementById("learn-tip");
+    tip.replaceChildren();
+    const b = document.createElement("b"); b.textContent = L.iv.tip; tip.appendChild(b);
+    const row = document.createElement("div"); row.className = "songs"; tip.appendChild(row);
+    if (L.iv.songs.length) {
+      row.append("Hear it in a song: ");
+      L.iv.songs.forEach(sg => {
+        const sb = document.createElement("button");
+        sb.type = "button"; sb.className = "btn ghost songbtn"; sb.textContent = "♪ " + sg.title;
+        sb.addEventListener("click", () => playSong(sg, L.notes[0].midi));
+        row.appendChild(sb);
+      });
+    } else {
+      row.textContent = "No famous song starts with this one. Listen for an octave that stops one semitone short.";
+    }
     drawStaff(learnSvg, L.notes, L.mode);
   }
   function playLearn() { playInterval(L.notes, L.mode, i => highlight(learnSvg, i)); }
