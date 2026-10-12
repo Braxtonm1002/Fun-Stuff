@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Click the heart 💖</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 40%, #fff0f5, #ffd6e4 70%, #ffc2d6);
+    font-family: "Segoe UI", system-ui, sans-serif;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #ground {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: 40px;
+    background: linear-gradient(#ffb3cb, #ff94b5);
+    box-shadow: 0 -4px 12px rgba(255, 105, 150, .25);
+  }
+  #hint {
+    position: fixed;
+    top: 8%;
+    width: 100%;
+    text-align: center;
+    color: #d6336c;
+    font-size: 1.2rem;
+    letter-spacing: .04em;
+    pointer-events: none;
+  }
+  #heart {
+    position: fixed;
+    left: 50%; top: 42%;
+    width: 140px; height: 140px;
+    margin: -70px 0 0 -70px;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    filter: drop-shadow(0 8px 14px rgba(214, 51, 108, .45));
+    animation: beat 1.4s ease-in-out infinite;
+    z-index: 2;
+  }
+  #heart svg { width: 100%; height: 100%; display: block; }
+  #heart:hover { filter: drop-shadow(0 8px 20px rgba(214, 51, 108, .7)); }
+  #heart:active, #heart.pop { animation: none; transform: scale(.88); }
+  #heart:focus-visible { outline: 3px dashed #d6336c; outline-offset: 8px; border-radius: 20px; }
+  @keyframes beat {
+    0%, 100% { transform: scale(1); }
+    15% { transform: scale(1.1); }
+    30% { transform: scale(1); }
+    45% { transform: scale(1.07); }
+  }
+  .note {
+    position: fixed;
+    left: 0; top: 0;
+    padding: 8px 18px;
+    background: #fff;
+    color: #d6336c;
+    font-weight: 700;
+    font-size: 1.4rem;
+    white-space: nowrap;
+    border-radius: 14px;
+    border: 2px solid #ff7aa2;
+    box-shadow: 0 4px 10px rgba(214, 51, 108, .3);
+    pointer-events: none;
+    z-index: 3;
+    will-change: transform;
+  }
+  canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 4;
+  }
+</style>
+</head>
+<body>
+  <div id="hint">Click the heart</div>
+  <div id="ground"></div>
+
+  <button id="heart" aria-label="Send some love">
+    <svg viewBox="0 0 32 29" aria-hidden="true">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#ff6b9a"/>
+          <stop offset="1" stop-color="#e0245e"/>
+        </linearGradient>
+      </defs>
+      <path fill="url(#g)" d="M23.6 0c-3.4 0-5.6 1.9-7.6 4.2C14 1.9 11.800 0 8.400 0 3.700 0 0 3.800 0 8.600c0 7.200 8.500 12.200 14.200 19.300.9 1.100 2.700 1.100 3.600 0C23.500 20.800 32 15.800 32 8.600 32 3.800 28.300 0 23.600 0z"/>
+      <path fill="#fff" opacity=".35" d="M7 4.500c1.200-.9 2.800-1 4-.2-1.800.1-3.200 1-3.800 2.600-.3.800-1.300.9-1.600.2-.4-.9 0-2 1.400-2.600z"/>
+    </svg>
+  </button>
+
+  <canvas id="fx"></canvas>
+
+<script>
+(() => {
+  const heart = document.getElementById('heart');
+  const canvas = document.getElementById('fx');
+  const ctx = canvas.getContext('2d');
+  const hint = document.getElementById('hint');
+  const GROUND_H = 40;
+  const GRAVITY = 1800;                  // px / s^2
+  const COLORS = ['#ff4d6d', '#ff758f', '#ff8fa3', '#e0245e', '#ffb3c6', '#c9184a', '#ff99ac'];
+
+  let W, H, dpr;
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  addEventListener('resize', resize);
+
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const notes = [];      // falling messages
+  const confetti = [];   // heart particles
+  let running = false;
+
+  // Heart path centred on (0,0), roughly size 1 x 1
+  function heartPath(c, s) {
+    c.beginPath();
+    c.moveTo(0, s * 0.35);
+    c.bezierCurveTo(-s * 0.9, -s * 0.2, -s * 0.45, -s * 0.85, 0, -s * 0.35);
+    c.bezierCurveTo(s * 0.45, -s * 0.85, s * 0.9, -s * 0.2, 0, s * 0.35);
+    c.closePath();
+  }
+
+  function spawnNote() {
+    const r = heart.getBoundingClientRect();
+    const el = document.createElement('div');
+    el.className = 'note';
+    el.textContent = 'I love you!';
+    document.body.appendChild(el);
+    const w = el.offsetWidth, h = el.offsetHeight;
+    notes.push({
+      el, w, h,
+      x: r.left + r.width / 2 - w / 2,
+      y: r.top + r.height * 0.3 - h / 2,
+      vx: rand(-160, 160),
+      vy: rand(-780, -620),
+      rot: 0,
+      vr: rand(-90, 90),
+      age: 0,
+      bounced: false,
+      landedAt: 0
+    });
+    start();
+  }
+
+  function explode(n) {
+    const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
+    const count = 70;
+    for (let i = 0; i < count; i++) {
+      const a = rand(0, Math.PI * 2);
+      const sp = rand(150, 650);
+      confetti.push({
+        x: cx + rand(-n.w / 3, n.w / 3), y: cy + rand(-n.h / 3, n.h / 3),
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - rand(150, 400),
+        size: rand(10, 24),
+        rot: rand(0, Math.PI * 2),
+        vr: rand(-8, 8),
+        wob: rand(0, Math.PI * 2),
+        color: COLORS[(Math.random() * COLORS.length) | 0],
+        life: 0,
+        ttl: rand(1.8, 3)
+      });
+    }
+  }
+
+  let last = 0;
+  function start() {
+    if (running) return;
+    running = true;
+    last = performance.now();
+    requestAnimationFrame(tick);
+  }
+
+  function tick(now) {
+    const dt = Math.min((now - last) / 1000, 0.033);
+    last = now;
+    const floor = H - GROUND_H;
+
+    // notes
+    for (let i = notes.length - 1; i >= 0; i--) {
+      const n = notes[i];
+      n.age += dt;
+      if (!n.landedAt) {
+        n.vy += GRAVITY * dt;
+        n.x += n.vx * dt;
+        n.y += n.vy * dt;
+        n.rot += n.vr * dt;
+        n.vx *= 1 - 0.8 * dt;
+        // keep on screen
+        if (n.x < 0) { n.x = 0; n.vx = Math.abs(n.vx); }
+        if (n.x + n.w > W) { n.x = W - n.w; n.vx = -Math.abs(n.vx); }
+        if (n.y + n.h >= floor && n.vy > 0) {
+          n.y = floor - n.h;
+          if (!n.bounced) {            // one little bounce
+            n.bounced = true;
+            n.vy = -n.vy * 0.28;
+            n.vx *= 0.4;
+            n.vr *= 0.3;
+          } else {
+            n.landedAt = n.age;
+            n.vy = 0; n.vx = 0;
+            n.rot = 0;
+          }
+        }
+      } else if (n.age - n.landedAt > 0.55) {   // sit for a beat, then boom
+        explode(n);
+        n.el.remove();
+        notes.splice(i, 1);
+        continue;
+      } else {
+        // anticipation wiggle / swell before exploding
+        const t = (n.age - n.landedAt) / 0.55;
+        n.rot = Math.sin(t * 40) * 4 * t;
+      }
+      const scaleIn = Math.min(n.age / 0.15, 1);
+      let s = scaleIn;
+      if (n.landedAt) s *= 1 + 0.25 * ((n.age - n.landedAt) / 0.55);
+      n.el.style.transform =
+        `translate(${n.x}px, ${n.y}px) rotate(${n.rot}deg) scale(${s})`;
+    }
+
+    // confetti
+    ctx.clearRect(0, 0, W, H);
+    for (let i = confetti.length - 1; i >= 0; i--) {
+      const p = confetti[i];
+      p.life += dt;
+      if (p.life > p.ttl) { confetti.splice(i, 1); continue; }
+      p.vy += GRAVITY * 0.35 * dt;
+      p.vx *= 1 - 1.6 * dt;
+      p.vy *= 1 - 0.9 * dt;
+      p.wob += dt * 6;
+      p.x += (p.vx + Math.sin(p.wob) * 40) * dt;
+      p.y += p.vy * dt;
+      p.rot += p.vr * dt;
+      if (p.y > floor - p.size * 0.3) {
+        p.y = floor - p.size * 0.3;
+        p.vy *= -0.3; p.vx *= 0.6; p.vr *= 0.5;
+      }
+      const fade = p.life > p.ttl - 0.6 ? (p.ttl - p.life) / 0.6 : 1;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot * 0.15);
+      ctx.scale(Math.cos(p.rot), 1);       // fake 3D flutter
+      ctx.globalAlpha = Math.max(fade, 0);
+      ctx.fillStyle = p.color;
+      heartPath(ctx, p.size);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    if (notes.length || confetti.length) requestAnimationFrame(tick);
+    else { running = false; ctx.clearRect(0, 0, W, H); }
+  }
+
+  let clicks = 0;
+  heart.addEventListener('click', () => {
+    heart.classList.add('pop');
+    setTimeout(() => heart.classList.remove('pop'), 120);
+    if (++clicks === 1) hint.style.opacity = 0;
+    spawnNote();
+  });
+  hint.style.transition = 'opacity .6s';
+})();
+</script>
+</body>
+</html>
